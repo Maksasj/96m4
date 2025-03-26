@@ -11,11 +11,37 @@ namespace m964 {
     struct Layer {
         T* values;
 
-        const std::size_t width = Width; 
-        const std::size_t height = Height;
+        std::size_t width = Width; 
+        std::size_t height = Height;
 
         explicit Layer() {
             values = new T[Width * Height];
+        }
+
+        Layer(const Layer& other) : width(other.width), height(other.height) {
+            values = new T[Width * Height];
+            std::copy(other.values, other.values + (Width * Height), values);
+        }
+
+        Layer& operator=(const Layer& other) {
+            if (this != &other)
+                std::copy(other.values, other.values + (Width * Height), values);
+            
+            return *this;
+        }
+
+        Layer(Layer&& other) noexcept : values(other.values) { 
+            other.values = nullptr;
+        }
+
+        Layer& operator=(Layer&& other) noexcept {
+            if (this != &other) {
+                delete[] values;
+                values = other.values;
+                other.values = nullptr;
+            }
+
+            return *this;
         }
 
         ~Layer() {
@@ -66,8 +92,8 @@ namespace m964 {
         Layer<C, Width, Height> states[2];
         Layer<K, Width, Height> weights;
 
-        const std::size_t width = Width; 
-        const std::size_t height = Height; 
+        std::size_t width = Width; 
+        std::size_t height = Height; 
     };
 
     template<typename C, typename K, std::size_t Width, std::size_t Height> requires Scalar<C>

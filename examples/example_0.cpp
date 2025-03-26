@@ -6,7 +6,6 @@
 
 #include "stb_image_write.h"
 
-
 template<typename C, std::size_t Width, std::size_t Height> requires m964::Scalar<C>
 auto export_state_as_image(const std::string& file_name, const m964::Layer<C, Width, Height>& state) -> void {
     auto buffer = std::vector<int> {};
@@ -37,7 +36,7 @@ auto rand_float(const float& min, const float& max) -> float {
 auto main() -> int {
     using namespace m964;
 
-    auto a = Model<float, Kernel3<float>, 1000u, 1000u>();
+    auto a = Model<float, Kernel3<float>, 64u, 64u>();
     
     a.states[0].fill([](const auto& x, const auto& y) {
         std::ignore = x;
@@ -48,9 +47,9 @@ auto main() -> int {
     a.weights.fill([](const auto& x, const auto& y) {
         std::ignore = x;
         std::ignore = y;
-        // return Kernel3<float>().fill(rand_float(-1.0, 1.0f));
+        return Kernel3<float>().fill(rand_float(-1.0, 1.0f));
         
-        return Kernel3<float> { -0.296, 0.304, -0.637, -0.226, -0.936, -0.051, 0.547, -0.034, 0.323}; 
+        // return Kernel3<float> { -0.296, 0.304, -0.637, -0.226, -0.936, -0.051, 0.547, -0.034, 0.323}; 
     });
 
     for(auto i = 0; i < 1000000; ++i) {
@@ -68,6 +67,7 @@ auto main() -> int {
             if(value < 0.0f) value = 0.0f;
         });
 
+        std::cout << i << "\n";
         export_state_as_image("state.png", new_state);
     }
 
