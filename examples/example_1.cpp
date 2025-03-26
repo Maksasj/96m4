@@ -11,7 +11,7 @@
 
 class PongGame {
     public:
-    int screen[16][32] = {0};
+        int screen[16][32];
 
     private:
         int SCREEN_WIDTH;
@@ -31,7 +31,6 @@ class PongGame {
         int ball_vy;
 
     private:
-
         void render_square(int x, int y, int size, int color) {
             for (int dy = 0; dy < size; dy++) {
                 for (int dx = 0; dx < size; dx++) {
@@ -92,6 +91,8 @@ class PongGame {
             ball_y = SCREEN_HEIGHT / 2;
             ball_vx = 1;
             ball_vy = -1;
+
+            clear_buffer();
         }
     
         bool game_over = false;
@@ -112,12 +113,11 @@ class PongGame {
     
             update_paddle();
     
-            if (ball_y >= paddle_y - BALL_SIZE &&
-                ball_x >= paddle_x && ball_x < paddle_x + PADDLE_WIDTH) {
+            if (ball_y >= paddle_y - BALL_SIZE && ball_x >= paddle_x && ball_x < paddle_x + PADDLE_WIDTH) {
                 ball_vy = -ball_vy;
             }
     
-            if (ball_y > SCREEN_HEIGHT) {
+            if (ball_y > (SCREEN_HEIGHT - 2)) {
                 game_over = true;
             }
     
@@ -165,10 +165,77 @@ auto rand_float(const float& min, const float& max) -> float {
     return dist(gen);
 }
 
+template<typename T>
+struct PlainValue {
+    const T value;
+
+    auto operator()(const auto& x, const auto& y) -> T {
+        std::ignore = x;
+        std::ignore = y;
+
+        return value;
+    }
+};
+
+template<typename T>
+struct ClampValue {
+    const T min;
+    const T max;
+
+    auto operator()(auto& value) -> void {
+        if(value > max) value = max;
+        if(value < min) value = min;
+    }
+};
+
+template<typename T>
+struct SinValue {
+    const T min;
+    const T max;
+
+    auto operator()(auto& value) -> void {
+        value = std::sin(value);
+    }
+};
+
+#define EULER_NUMBER 2.71828
+#define EULER_NUMBER_F 2.71828182846
+#define EULER_NUMBER_L 2.71828182845904523536
+
+template<typename T>
+struct SigmoidValue {
+    const T min;
+    const T max;
+
+    auto operator()(auto& value) -> void {
+        value = (1 / (1 + std::pow(EULER_NUMBER, -value)));
+    }
+};
+
+template<typename T>
+struct ReluValue {
+    const T min;
+    const T max;
+
+    auto operator()(auto& value) -> void {
+        if(value < 0) value = 0;
+    }
+};
+
+template<typename T>
+struct KernelOffset {
+    const T min;
+    const T max;
+
+    auto operator()(auto& value) {
+        for(int j = 0; j < 9; ++j)
+            value.values[j] += rand_float(min,max);
+    }
+};
+
 auto main() -> int {
     using namespace m964;
 
-    int current_score = 0;
     auto best = Model<float, Kernel3<float>, 32u, 16u>();
 
     best.weights.fill([](const auto& x, const auto& y) {
@@ -178,20 +245,16 @@ auto main() -> int {
     });
     
     int e = 0;
+    int current_score = 0;
     bool first = true;
     while(1) {
         std::vector<Model<float, Kernel3<float>, 32u, 16u>> models;
     
-        best.states[0].fill([](const auto& x, const auto& y) {
-            return 0.0f;
-        });
-
-        best.states[1].fill([](const auto& x, const auto& y) {
-            return 0.0f;
-        });
+        best.states[0].fill(PlainValue<float>{ 0.0f });
+        best.states[1].fill(PlainValue<float>{ 0.0f });
 
         if(first) {
-            for(int m = 0; m < 2000; ++m) {
+            for(int m = 0; m < 100; ++m) {
                 models.push_back(Model<float, Kernel3<float>, 32u, 16u>());
                 auto& model = models[models.size() - 1];
 
@@ -204,15 +267,12 @@ auto main() -> int {
                 first = false;
             }
         } else {
-            for(int m = 0; m < 200; ++m) {
+            for(int m = 0; m < 100; ++m) {
                 models.push_back(best);
                 auto& model = models[models.size() - 1];
                 auto& weights = model.weights; 
     
-                weights.apply([](auto& value) {
-                    for(int j = 0; j < 9; ++j)
-                        value.values[j] += rand_float(-1.0, 1.0f) * 0.1f;
-                });
+                weights.apply(KernelOffset<float>{ -1.0, 1.0f });
             }
         }
 
@@ -238,6 +298,8 @@ auto main() -> int {
                     for(int j = 0; j < 16; ++j) {
                         if(game.screen[j][i])
                             old_state(i, j) = 1.0f;
+                        else
+                            old_state(i, j) = 0.0f;
                     }
                 }
 
@@ -252,19 +314,13 @@ auto main() -> int {
                     calculate_state(new_state, old_state, weights);
                     
                     // apply clamp
-                    new_state.apply([](auto& value) {
-                        if(value > 1.0f) value = 1.0f;
-                        if(value < 0.0f) value = 0.0f;
-                    });
-
+                    new_state.apply(ClampValue<float> { 0.0f, 1.0f });
+                    new_state.apply(ReluValue<float> {});
                     ++i;
                 }
 
-                if(new_state(16, 8) < 0.5f)
-                    game.paddle_left();
-
-                if(new_state(16, 8) > 0.5f)
-                    game.paddle_right();
+                if(new_state(16, 8) < 0.5f) game.paddle_left();
+                if(new_state(16, 8) > 0.5f) game.paddle_right();
                 
                 ++score;
 
@@ -283,13 +339,8 @@ auto main() -> int {
         }
 
         if(current_score > 300) {
-            best.states[0].fill([](const auto& x, const auto& y) {
-                return 0.0f;
-            });
-    
-            best.states[1].fill([](const auto& x, const auto& y) {
-                return 0.0f;
-            });
+            best.states[0].fill(PlainValue<float>{ 0.0f });
+            best.states[1].fill(PlainValue<float>{ 0.0f });
 
             PongGame game;
 
@@ -308,6 +359,8 @@ auto main() -> int {
                     for(int j = 0; j < 16; ++j) {
                         if(game.screen[j][i])
                             old_state(i, j) = 1.0f;
+                        else
+                            old_state(i, j) = 0.0f;
                     }
                 }
 
@@ -322,14 +375,11 @@ auto main() -> int {
                     calculate_state(new_state, old_state, weights);
                     
                     // apply clamp
-                    new_state.apply([](auto& value) {
-                        if(value > 1.0f) value = 1.0f;
-                        if(value < 0.0f) value = 0.0f;
-                    });
+                    new_state.apply(ClampValue<float> { 0.0f, 1.0f });
+                    new_state.apply(ReluValue<float> {});
                     
                     export_state_as_image("state.png", new_state);
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
                     ++i;
                 }
 
