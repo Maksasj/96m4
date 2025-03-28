@@ -49,31 +49,25 @@ namespace m964 {
         }
 
         auto fill(const T& value) -> Layer<T, Width, Height>& {
-            for(std::size_t x = 0; x < width; ++x) {
-                for(std::size_t y = 0; y < height; ++y) {
+            for(std::size_t x = 0; x < width; ++x)
+                for(std::size_t y = 0; y < height; ++y)
                     values[x + y*width] = value;
-                }
-            }
 
             return *this;
         }
 
         auto fill(const std::function<T(const std::size_t&, const std::size_t&)>& lambda) -> Layer<T, Width, Height>& {
-            for(std::size_t x = 0; x < width; ++x) {
-                for(std::size_t y = 0; y < height; ++y) {
+            for(std::size_t x = 0; x < width; ++x)
+                for(std::size_t y = 0; y < height; ++y)
                     values[x + y*width] = lambda(x, y);
-                }
-            }
 
             return *this;
         }
 
         auto apply(const std::function<void(T&)>& lambda) -> Layer<T, Width, Height>& {
-            for(std::size_t x = 0; x < Width; ++x) {
-                for(std::size_t y = 0; y < Height; ++y) {
+            for(std::size_t x = 0; x < Width; ++x)
+                for(std::size_t y = 0; y < Height; ++y)
                     lambda(values[x + y*Width]);
-                }
-            }
 
             return *this;
         }

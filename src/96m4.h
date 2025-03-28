@@ -4,3 +4,4 @@
 #include "layer.hpp"
 #include "kernel.hpp"
 #include "model.hpp"
+#include "utils.hpp"

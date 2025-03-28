@@ -11,8 +11,8 @@ namespace m964 {
         Layer<C, Width, Height> states[2];
         Layer<K, Width, Height> weights;
 
-        std::size_t width = Width; 
-        std::size_t height = Height; 
+        std::size_t width = Width;
+        std::size_t height = Height;
     };
 
     template<typename C, typename K, std::size_t Width, std::size_t Height> requires Scalar<C>
