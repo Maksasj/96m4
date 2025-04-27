@@ -8,8 +8,6 @@ class PongGame {
         std::int32_t SCREEN_WIDTH;
         std::int32_t SCREEN_HEIGHT;
         
-
-        
         std::int32_t PADDLE_WIDTH;
         std::int32_t PADDLE_HEIGHT;
         std::int32_t paddle_x;

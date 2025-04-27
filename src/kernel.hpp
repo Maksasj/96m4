@@ -1,9 +1,7 @@
 #pragma once
 
-#include "scalar.hpp"
-
 namespace m964 {
-    template<typename T, std::size_t Width, std::size_t Height> requires Scalar<T>
+    template<typename T, std::size_t Width, std::size_t Height>
     struct Kernel {
         T values[Width * Height];
 

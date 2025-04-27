@@ -1,24 +1,23 @@
-#pragma once
-
-#include <cstddef>
-
-#include "layer.hpp"
-#include "scalar.hpp"
+#include "model.h"
 
 namespace m964 {
-    template<typename C, typename K, std::size_t Width, std::size_t Height> requires Scalar<C>
-    struct Model {
-        Layer<C, Width, Height> states[2];
-        Layer<K, Width, Height> weights;
+    Model::Model(
+        const std::size_t& width, 
+        const std::size_t& height
+    ) : width(width),
+        height(height),
+        states{ Layer(width, height), Layer(width, height) },
+        weights(width, height)
+    {
 
-        std::size_t width = Width;
-        std::size_t height = Height;
-    };
+    }
 
-    template<typename C, typename K, std::size_t Width, std::size_t Height> requires Scalar<C>
-    auto calculate_state(Layer<C, Width, Height>& new_state, const Layer<C, Width, Height>& state, const Layer<K, Width, Height>& weights) {
-        for(size_t x = 1; x < Width - 1; ++x) {
-            for(size_t y = 1; y < Height - 1; ++y) {
+    auto calculate_state(Layer& new_state, const Layer& state, const KernelLayer& weights) -> void {
+        const auto width = new_state.get_width();
+        const auto height = new_state.get_height();
+
+        for(size_t x = 1; x < width - 1; ++x) {
+            for(size_t y = 1; y < height - 1; ++y) {
                 auto value = state(x, y) * weights(x, y)(1, 1);
                 value += state(x, y + 1) * weights(x, y + 1)(1, 2);
                 value += state(x, y - 1) * weights(x, y - 1)(1, 0);

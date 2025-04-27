@@ -12,4 +12,5 @@ else()
 endif()
 
 add_subdirectory(3dparty)
+add_subdirectory(src)
 add_subdirectory(examples)

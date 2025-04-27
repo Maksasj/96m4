@@ -47,18 +47,58 @@ std::uint32_t hsl_to_rgb(float H, float L, float S) {
 	return rgb;
 }
 
-template<typename C, std::size_t Width, std::size_t Height> requires m964::Scalar<C>
-auto export_state_as_image(const std::string& file_name, const m964::Layer<C, Width, Height>& state) -> void {
-    auto buffer = std::vector<std::int32_t> {};
-    buffer.resize(Width * Height);
+auto export_state_as_image(const std::string& file_name, const m964::Layer& state) -> void {
+    const auto width = state.get_width();
+    const auto height = state.get_height();
 
-    for(size_t x = 0; x < Width; ++x) {
-        for(size_t y = 0; y < Height; ++y) {
+	auto buffer = std::vector<std::int32_t> {};
+    buffer.resize(width * height);
+
+    for(size_t x = 0; x < width; ++x) {
+        for(size_t y = 0; y < height; ++y) {
             auto value = state(x, y);
-            buffer[x + y*Width] = hsl_to_rgb((1 - value) * 255, 0.5f, 1.0f);
+            buffer[x + y*width] = hsl_to_rgb((1 - value) * 255, 0.5f, 1.0f);
         }
     }
 
-    stbi_write_jpg(file_name.c_str(), Width, Height, 4, buffer.data(), Width * sizeof(std::int32_t));
+    stbi_write_jpg(file_name.c_str(), width, height, 4, buffer.data(), width * sizeof(std::int32_t));
 }
 
+std::uint32_t direction_to_rgb_magnitude_grouping(float* direction) {
+    float magR_sq = direction[0] * direction[0] + direction[1] * direction[1] + direction[2] * direction[2];
+    float magG_sq = direction[3] * direction[3] + direction[4] * direction[4] + direction[5] * direction[5];
+    float magB_sq = direction[6] * direction[6] + direction[7] * direction[7] + direction[8] * direction[8];
+
+    float magR = sqrtf(magR_sq);
+    float magG = sqrtf(magG_sq);
+    float magB = sqrtf(magB_sq);
+
+    const float max_sub_magnitude = sqrtf(3.0f);
+
+    float r_norm = magR / max_sub_magnitude;
+    float g_norm = magG / max_sub_magnitude;
+    float b_norm = magB / max_sub_magnitude;
+
+	auto r = static_cast<unsigned char>(std::clamp(r_norm * 255.0f, 0.0f, 255.0f));
+	auto g = static_cast<unsigned char>(std::clamp(g_norm * 255.0f, 0.0f, 255.0f));
+	auto b = static_cast<unsigned char>(std::clamp(b_norm * 255.0f, 0.0f, 255.0f));
+
+    return (255 << 24) | (b << 16) | (g << 8) | (r);
+}
+
+auto export_state_as_image(const std::string& file_name, const m964::KernelLayer& state) -> void {
+    const auto width = state.get_width();
+    const auto height = state.get_height();
+
+	auto buffer = std::vector<std::int32_t> {};
+    buffer.resize(width * height);
+
+    for(size_t x = 0; x < width; ++x) {
+        for(size_t y = 0; y < height; ++y) {
+            auto value = state(x, y);
+            buffer[x + y*width] = direction_to_rgb_magnitude_grouping(value.values);
+        }
+    }
+
+    stbi_write_jpg(file_name.c_str(), width, height, 4, buffer.data(), width * sizeof(std::int32_t));
+}

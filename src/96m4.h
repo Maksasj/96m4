@@ -1,7 +1,6 @@
 #pragma once
 
-#include "scalar.hpp"
-#include "layer.hpp"
+#include "layer.h"
 #include "kernel.hpp"
-#include "model.hpp"
+#include "model.h"
 #include "utils.hpp"
