@@ -1,7 +1,7 @@
 #pragma once
 
 namespace m964 {
-    auto rand_int(const int& min, const int& max) -> float {
+    auto rand_int(const int& min, const int& max) -> int {
         static std::random_device rd;
         static std::mt19937 gen(rd());
         std::uniform_int_distribution<int> dist(min, max);

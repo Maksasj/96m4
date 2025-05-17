@@ -80,13 +80,12 @@ auto model_cost(Model &model) -> size_t {
         auto &weights = model.weights;
 
         auto offset = rand_int(-3, 3);
-        for (auto t = 0; t < 24 + offset; ++t) {
+        for (std::int32_t t = 0; t < (24 + offset); ++t) {
             o = i % 2;
             n = (i + 1) % 2;
 
             old_state = model.states[o];
             new_state = model.states[n];
-            weights = model.weights;
 
             calculate_state(new_state, old_state, weights);
 
@@ -108,14 +107,13 @@ auto model_cost(Model &model) -> size_t {
 }
 
 auto model_demonstrate(Model& model) -> void {
-    auto &weights = model.weights;
-    export_state_as_image("weights.png", weights);
-
     model.fill_states(0.0f);
 
     auto game = PongGame();
 
     std::int32_t i = 0;
+    std::int32_t score = 0;
+
     while (!game.is_game_over()) {
         game.simulate_frame();
 
@@ -127,31 +125,36 @@ auto model_demonstrate(Model& model) -> void {
         });
 
         auto &new_state = model.states[n];
+        auto &weights = model.weights;
 
         auto offset = rand_int(-3, 3);
-        for (std::int32_t t = 0; t < 24 + offset; ++t) {
+        for (std::int32_t t = 0; t < (24 + offset); ++t) {
             o = i % 2;
             n = (i + 1) % 2;
 
             old_state = model.states[o];
             new_state = model.states[n];
-            weights = model.weights;
 
             calculate_state(new_state, old_state, weights);
 
             new_state.apply(NormalizeValue());
             new_state.apply(ReluValue<float>{});
 
-            export_state_as_image("state.png", new_state);
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
             ++i;
         }
+
+        ++score;
 
         if (new_state(16, 8) < 0.5f) game.paddle_left();
         if (new_state(16, 8) > 0.5f) game.paddle_right();
 
         game.display_buffer();
+        export_state_as_image("state.png", new_state);
+        export_state_as_image("weights.png", weights);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+
+    std::cout << score << std::endl;
 }
 
 [[noreturn]] auto main(const int argc, char* argv[]) -> std::int32_t {
@@ -203,12 +206,14 @@ auto model_demonstrate(Model& model) -> void {
         ++epoch;
         std::cout << "Epoch " << epoch << " (" <<  epoch * 100 << ") with generation " << generation << " with best score " << best_score << "\n";
 
-        if (best_score > 1000)
+        if (best_score > 10000)
             break;
     }
 
     std::cout << "Training is finished !\n";
-    model_demonstrate(best);
+
+    while(1)
+        model_demonstrate(best);
 
     return 0;
 }
