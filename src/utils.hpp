@@ -1,6 +1,13 @@
 #pragma once
 
 namespace m964 {
+    auto rand_int(const int& min, const int& max) -> float {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> dist(min, max);
+        return dist(gen);
+    }
+
     auto rand_float(const float& min, const float& max) -> float {
         static std::random_device rd;
         static std::mt19937 gen(rd());
@@ -28,6 +35,12 @@ namespace m964 {
         auto operator()(auto& value) -> void {
             if(value > max) value = max;
             if(value < min) value = min;
+        }
+    };
+
+    struct NormalizeValue : public ClampValue<float> {
+        NormalizeValue() : ClampValue(0.0f, 1.0f) {
+
         }
     };
 
@@ -61,7 +74,8 @@ namespace m964 {
         const T max;
 
         auto operator()(auto& value) -> void {
-            if(value < 0) value = 0;
+            if(value < 0)
+                value = 0;
         }
     };
 

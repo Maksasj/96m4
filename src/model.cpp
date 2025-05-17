@@ -12,6 +12,11 @@ namespace m964 {
 
     }
 
+    auto Model::fill_states(const float& value) ->void {
+        states[0].fill(value);
+        states[1].fill(value);
+    }
+
     auto calculate_state(Layer& new_state, const Layer& state, const KernelLayer& weights) -> void {
         const auto width = new_state.get_width();
         const auto height = new_state.get_height();

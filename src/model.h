@@ -16,6 +16,8 @@ namespace m964 {
       
         public:
             Model(const std::size_t& width, const std::size_t& height);
+
+            auto fill_states(const float& value) -> void;
     };
 
     auto calculate_state(Layer& new_state, const Layer& state, const KernelLayer& weights) -> void;
