@@ -150,7 +150,6 @@ auto model_demonstrate(Model& model) -> void {
 
         game.display_buffer();
         export_state_as_image("state.png", new_state);
-        export_state_as_image("weights.png", weights);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
@@ -206,7 +205,7 @@ auto model_demonstrate(Model& model) -> void {
         ++epoch;
         std::cout << "Epoch " << epoch << " (" <<  epoch * 100 << ") with generation " << generation << " with best score " << best_score << "\n";
 
-        if (best_score > 10000)
+        if (best_score > 1000)
             break;
     }
 

@@ -45,16 +45,6 @@ class PongGame {
             }
         }
         
-        void autopilot_paddle_update() {
-            std::int32_t paddle_center = paddle_x + PADDLE_WIDTH / 2;
-            if (ball_x > paddle_center)
-                paddle_x++;
-            else if (ball_x < paddle_center)
-                paddle_x--;
-
-            paddle_x = std::max(0, std::min(paddle_x, SCREEN_WIDTH - PADDLE_WIDTH));
-        }
-
     public:
         void paddle_left() {
             paddle_x++;
@@ -91,6 +81,7 @@ class PongGame {
         }
 
         void simulate_frame() {
+            // uodate ball
             ball_x += ball_vx;
             ball_y += ball_vy;
     
@@ -99,9 +90,7 @@ class PongGame {
     
             if (ball_y <= 0)
                 ball_vy = -ball_vy;
-    
-            // autopilot_paddle_update();
-    
+
             if (ball_y >= paddle_y - BALL_SIZE && ball_x >= paddle_x && ball_x < paddle_x + PADDLE_WIDTH) {
                 ball_vy = -ball_vy;
             }
@@ -109,11 +98,11 @@ class PongGame {
             if (ball_y > (SCREEN_HEIGHT - 2)) {
                 game_over = true;
             }
-    
+
+            // render screen
             clear_buffer();
             render_square(ball_x, ball_y, BALL_SIZE, 0xffffffff);
-            render_rectangle(paddle_x, paddle_y, PADDLE_WIDTH, PADDLE_HEIGHT, 0xffffffff);
-            // display_buffer();
+            render_rectangle(paddle_x, paddle_y, PADDLE_WIDTH, PADDLE_HEIGHT, 0xffffff00);
         }
 
         void clear_buffer() {

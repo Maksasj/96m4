@@ -54,7 +54,7 @@ auto model_cost(Model &model) -> size_t {
 
         ++score;
 
-        if (score > 1000)
+        if (score > 100)
             break;
     }
 
