@@ -1,11 +1,11 @@
 #include <iostream>
-
+#include <thread>
 #include <chrono>
-#include <algorithm>
 #include <string>
 #include <random>
 #include <execution>
 #include <mutex>
+#include <unordered_set>
 
 #include "96m4.h"
 #include "utils.hpp"
@@ -23,20 +23,20 @@ auto model_cost(Model &model, const size_t& steps) -> float {
         game.simulate_frame();
 
         model.reset_states();
-        model.get_old_state()(0, 1) = static_cast<float>(game.get_ball_position().first) / 32.0f;
-        model.get_old_state()(1, 1) = static_cast<float>(game.get_ball_position().second) / 16.0f;
-        model.get_old_state()(2, 1) = static_cast<float>(game.get_paddle_position().first) / 32.0f;
+        model.get_old_state().fill([&](const auto &x, const auto &y) {
+            return game.screen[y][x] ? 1.0f : 0.0f;
+        });
 
-        const auto offset = rand_int(-1, 1);
+        auto offset = rand_int(-3, 3);
         for (std::int32_t t = 0; t < (steps + offset); ++t)
             model.simulate_step();
 
-        const auto sample = model.get_new_state()(1, 0);
+        const auto sample = model.get_new_state()(16, 8);
         const auto expected = game.paddle_prediction();
-        cost += std::fabs(expected - sample);
+        cost += 1 - std::fabs(expected - sample);
 
-        if (expected < 0.5f) game.paddle_left();
-        if (expected > 0.5f) game.paddle_right();
+        if (sample < 0.5f) game.paddle_left();
+        if (sample > 0.5f) game.paddle_right();
 
         ++score;
 
@@ -55,15 +55,15 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
         game.simulate_frame();
 
         model.reset_states();
-        model.get_old_state()(0, 1) = static_cast<float>(game.get_ball_position().first) / 32.0f;
-        model.get_old_state()(1, 1) = static_cast<float>(game.get_ball_position().second) / 16.0f;
-        model.get_old_state()(2, 1) = static_cast<float>(game.get_paddle_position().first) / 32.0f;
+        model.get_old_state().fill([&](const auto &x, const auto &y) {
+            return game.screen[y][x] ? 1.0f : 0.0f;
+        });
 
-        const auto offset = rand_int(-1, 1);
+        auto offset = rand_int(-3, 3);
         for (std::int32_t t = 0; t < (steps + offset); ++t)
             model.simulate_step();
 
-        const auto sample = model.get_new_state()(1, 0);
+        const auto sample = model.get_new_state()(16, 8);
         if (sample < 0.5f) game.paddle_left();
         if (sample > 0.5f) game.paddle_right();
 
@@ -77,16 +77,16 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
     std::cout << score << std::endl;
 }
 
-auto main() -> std::int32_t {
-    auto steps = 5;
+[[noreturn]] auto main() -> std::int32_t {
+    auto steps = 24;
 
     auto best_mutex = std::mutex {};
-    auto best = Model(3, 2);
+    auto best = Model(32u, 16u);
     auto found_best = false;
     auto best_cost = model_cost(best, steps);
 
     best.weights.fill([]() {
-        return Kernel().fill(rand_float(-1.0, 1.0f));
+        return Kernel().fill(m964::rand_float(-1.0, 1.0f));
     });
 
     auto generation = 1;
@@ -96,9 +96,9 @@ auto main() -> std::int32_t {
         const auto mutation_rate = 1.0f / static_cast<float>(generation);
 
         auto models = std::vector<Model>{};
-        models.reserve(1000);
+        models.reserve(100);
 
-        for (auto i = 0; i < 1000; ++i) {
+        for (auto i = 0; i < 100; ++i) {
             auto model = best;
 
             model.weights.apply(KernelOffset {
@@ -113,7 +113,7 @@ auto main() -> std::int32_t {
             auto cost = model_cost(model, steps);
 
             best_mutex.lock();
-            if (cost < best_cost) {
+            if (cost > best_cost) {
                 best_cost = cost;
                 best = model;
                 found_best = true;
@@ -127,16 +127,16 @@ auto main() -> std::int32_t {
         }
 
         ++epoch;
-        std::cout << "Epoch " << epoch << " (" <<  epoch * 1000 << ") with generation " << generation << " with best cost " << best_cost <<  "\n";
+        std::cout << "Epoch " << epoch << " (" <<  epoch * 100 << ") with generation " << generation << " with best cost " << best_cost <<  "\n";
 
-        if (best_cost < 5)
+        if (best_cost > 500)
             break;
     }
 
     std::cout << "Training is finished !\n";
 
-    while(true)
-        model_demonstrate(best, steps);
+    while(1)
+        model_demonstrate(best, 24);
 
     return 0;
 }

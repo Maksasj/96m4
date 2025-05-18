@@ -14,9 +14,10 @@
 
 using namespace m964;
 
-auto model_cost(Model &model, const size_t& steps) -> size_t {
+auto model_cost(Model &model, const size_t& steps) -> float {
     auto game = PongGame();
     auto score = 0;
+    auto cost = 0.0f;
 
     while (!game.is_game_over()) {
         game.simulate_frame();
@@ -30,8 +31,12 @@ auto model_cost(Model &model, const size_t& steps) -> size_t {
         for (std::int32_t t = 0; t < (steps + offset); ++t)
             model.simulate_step();
 
-        if (model.get_new_state()(16, 8) < 0.5f) game.paddle_left();
-        if (model.get_new_state()(16, 8) > 0.5f) game.paddle_right();
+        const auto sample = model.get_new_state()(16, 8);
+        const auto expected = game.paddle_prediction();
+        cost += std::fabs(expected - sample);
+
+        if (expected < 0.5f) game.paddle_left();
+        if (expected > 0.5f) game.paddle_right();
 
         ++score;
 
@@ -39,7 +44,7 @@ auto model_cost(Model &model, const size_t& steps) -> size_t {
             break;
     }
 
-    return score;
+    return cost;
 }
 
 auto model_demonstrate(Model& model, const size_t& steps) -> void {
@@ -58,8 +63,9 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
         for (std::int32_t t = 0; t < (steps + offset); ++t)
             model.simulate_step();
 
-        if (model.get_new_state()(16, 8) < 0.5f) game.paddle_left();
-        if (model.get_new_state()(16, 8) > 0.5f) game.paddle_right();
+        const auto sample = model.get_new_state()(16, 8);
+        if (sample < 0.5f) game.paddle_left();
+        if (sample > 0.5f) game.paddle_right();
 
         ++score;
 
@@ -71,17 +77,13 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
     std::cout << score << std::endl;
 }
 
-[[noreturn]] auto main(const int argc, char* argv[]) -> std::int32_t {
-    auto arguments = std::unordered_set<std::string> {};
-
-    auto executor = ParallelExecutor();
-
-    for (int i = 1; i < argc; ++i)
-        arguments.insert(argv[i]);
+[[noreturn]] auto main() -> std::int32_t {
+    auto steps = 24;
 
     auto best_mutex = std::mutex {};
     auto best = Model(32u, 16u);
-    auto best_score = model_cost(best, 24);
+    auto found_best = false;
+    auto best_cost = model_cost(best, steps);
 
     best.weights.fill([]() {
         return Kernel().fill(m964::rand_float(-1.0, 1.0f));
@@ -91,6 +93,8 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
     auto epoch = 0;
 
     while (true) {
+        const auto mutation_rate = 1.0f / static_cast<float>(generation);
+
         auto models = std::vector<Model>{};
         models.reserve(100);
 
@@ -98,27 +102,34 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
             auto model = best;
 
             model.weights.apply(KernelOffset {
-                -1.0f / static_cast<float>(generation), 1.0f / static_cast<float>(generation)
+                -1.0f * mutation_rate, 1.0f * mutation_rate
             });
+
             models.push_back(model);
         }
 
+        auto executor = ParallelExecutor();
         executor.execute(models.begin(), models.end(), [&](auto &model) {
-            auto score = model_cost(model, 24);
+            auto cost = model_cost(model, steps);
 
             best_mutex.lock();
-            if (score > best_score) {
-                best_score = score;
+            if (cost < best_cost) {
+                best_cost = cost;
                 best = model;
-                ++generation;
+                found_best = true;
             }
             best_mutex.unlock();
         });
 
-        ++epoch;
-        std::cout << "Epoch " << epoch << " (" <<  epoch * 100 << ") with generation " << generation << " with best score " << best_score << "\n";
+        if (found_best) {
+            ++generation;
+            found_best = false;
+        }
 
-        if (best_score > 1000)
+        ++epoch;
+        std::cout << "Epoch " << epoch << " (" <<  epoch * 100 << ") with generation " << generation << " with best cost " << best_cost <<  "\n";
+
+        if (best_cost < 5)
             break;
     }
 
