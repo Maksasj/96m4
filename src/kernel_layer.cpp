@@ -2,11 +2,11 @@
 
 namespace m964 {
     KernelLayer::KernelLayer(const std::size_t& width, const std::size_t& height) : width(width), height(height) {
-        values = new Kernel3<float>[width * height];
+        values = new Kernel[width * height];
     }
 
     KernelLayer::KernelLayer(const KernelLayer& other) : width(other.width), height(other.height) {
-        values = new Kernel3<float>[width * height];
+        values = new Kernel[width * height];
         std::copy(other.values, other.values + (width * height), values);
     }
 
@@ -35,7 +35,7 @@ namespace m964 {
         delete [] values;
     }
 
-    auto KernelLayer::fill(const Kernel3<float>& value) -> KernelLayer& {
+    auto KernelLayer::fill(const Kernel& value) -> KernelLayer& {
         for(std::size_t x = 0; x < width; ++x)
             for(std::size_t y = 0; y < height; ++y)
                 values[x + y*width] = value;
@@ -43,7 +43,7 @@ namespace m964 {
         return *this;
     }
 
-    auto KernelLayer::fill(const std::function<Kernel3<float>()>& lambda) -> KernelLayer& {
+    auto KernelLayer::fill(const std::function<Kernel()>& lambda) -> KernelLayer& {
         for(std::size_t x = 0; x < width; ++x)
             for(std::size_t y = 0; y < height; ++y)
                 values[x + y*width] = lambda();
@@ -51,7 +51,7 @@ namespace m964 {
         return *this;
     }
 
-    auto KernelLayer::fill(const std::function<Kernel3<float>(const std::size_t&, const std::size_t&)>& lambda) -> KernelLayer& {
+    auto KernelLayer::fill(const std::function<Kernel(const std::size_t&, const std::size_t&)>& lambda) -> KernelLayer& {
         for(std::size_t x = 0; x < width; ++x)
             for(std::size_t y = 0; y < height; ++y)
                 values[x + y*width] = lambda(x, y);
@@ -59,7 +59,7 @@ namespace m964 {
         return *this;
     }
 
-    auto KernelLayer::apply(const std::function<void(Kernel3<float>&)>& lambda) -> KernelLayer& {
+    auto KernelLayer::apply(const std::function<void(Kernel&)>& lambda) -> KernelLayer& {
         for(std::size_t x = 0; x < width; ++x)
             for(std::size_t y = 0; y < height; ++y)
                 lambda(values[x + y*width]);
@@ -75,11 +75,11 @@ namespace m964 {
         return height;
     }
 
-    auto KernelLayer::operator()(const size_t& x, const size_t& y) -> Kernel3<float>& {
+    auto KernelLayer::operator()(const size_t& x, const size_t& y) -> Kernel& {
         return values[x + y*width];
     }
 
-    auto KernelLayer::operator()(const size_t& x, const size_t& y) const -> const Kernel3<float>& {
+    auto KernelLayer::operator()(const size_t& x, const size_t& y) const -> const Kernel& {
         return values[x + y*width];
     }
 }

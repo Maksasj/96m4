@@ -9,12 +9,33 @@ namespace m964 {
         states{ Layer(width, height), Layer(width, height) },
         weights(width, height)
     {
-
+        old_state = 0;
+        new_state = 1;
     }
 
     auto Model::fill_states(const float& value) ->void {
-        states[0].fill(value);
-        states[1].fill(value);
+        states[old_state].fill(value);
+        states[new_state].fill(value);
+    }
+
+    auto Model::simulate_step() -> void {
+        auto& o_state = get_old_state();
+        auto& n_state = get_new_state();
+
+        calculate_state(n_state, o_state, weights);
+
+        n_state.apply(NormalizeValue());
+        n_state.apply(ReluValue{});
+
+        std::swap(old_state, new_state);
+    }
+
+    auto Model::get_new_state() -> Layer& {
+        return states[new_state];
+    }
+
+    auto Model::get_old_state() -> Layer& {
+        return states[old_state];
     }
 
     auto calculate_state(Layer& new_state, const Layer& state, const KernelLayer& weights) -> void {

@@ -4,7 +4,7 @@
 #include <vector>
 #include <functional>
 
-#include "kernel.hpp"
+#include "kernel.h"
 
 namespace m964 {
     class KernelLayer {
@@ -12,7 +12,7 @@ namespace m964 {
             std::size_t width; 
             std::size_t height;
 
-            Kernel3<float>* values;
+            Kernel* values;
         
         public:
             explicit KernelLayer(const std::size_t& width, const std::size_t& height);
@@ -23,16 +23,17 @@ namespace m964 {
             KernelLayer(KernelLayer&& other) noexcept;
             KernelLayer& operator=(KernelLayer&& other) noexcept;
 
-            auto fill(const Kernel3<float>& value) -> KernelLayer&;
-            auto fill(const std::function<Kernel3<float>()>& lambda) -> KernelLayer&;
-            auto fill(const std::function<Kernel3<float>(const std::size_t&, const std::size_t&)>& lambda) -> KernelLayer&;
+            auto fill(const Kernel& value) -> KernelLayer&;
+            auto fill(const std::function<Kernel()>& lambda) -> KernelLayer&;
+            auto fill(const std::function<Kernel(const std::size_t&, const std::size_t&)>& lambda) -> KernelLayer&;
 
-            auto apply(const std::function<void(Kernel3<float>&)>& lambda) -> KernelLayer&;
+            auto apply(const std::function<void(Kernel&)>& lambda) -> KernelLayer&;
 
             auto get_width() const -> std::size_t;
             auto get_height() const -> std::size_t;
 
-            auto operator()(const size_t& x, const size_t& y) -> Kernel3<float>&;
-            auto operator()(const size_t& x, const size_t& y) const -> const Kernel3<float>&;
+            auto operator()(const size_t& x, const size_t& y) -> Kernel&;
+            auto operator()(const size_t& x, const size_t& y) const -> const Kernel&;
     };
+
 }

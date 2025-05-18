@@ -21,7 +21,7 @@ auto main() -> std::int32_t {
     a.weights.fill([](const auto& x, const auto& y) {
         std::ignore = x;
         std::ignore = y;
-        return Kernel3<float> { -0.296, 0.304, -0.637, -0.226, -0.936, -0.051, 0.547, -0.034, 0.323}; 
+        return Kernel { -0.296, 0.304, -0.637, -0.226, -0.936, -0.051, 0.547, -0.034, 0.323}; 
     });
    
     for(auto i = 0; i < 1000000; ++i) {

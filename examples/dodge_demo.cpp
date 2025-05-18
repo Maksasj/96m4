@@ -118,7 +118,7 @@ auto model_demonstrate(Model& model) -> void {
     auto best_score = 0;
 
     best.weights.fill([]() {
-        return Kernel3<float>().fill(m964::rand_float(-1.0, 1.0f));
+        return Kernel().fill(m964::rand_float(-1.0, 1.0f));
     });
 
     auto generation = 1;

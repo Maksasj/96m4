@@ -60,42 +60,43 @@ class ParallelExecutor {
         unsigned int num_threads;
 };
 
-auto model_cost(Model &model) -> size_t {
+class PongInputPolicy {
+    private:
+
+    public:
+};
+
+class FullBoardPongInputPolicy : public PongInputPolicy {
+    private:
+
+    public:
+        auto inputs() -> void {
+            /*
+            auto &old_state = model.states[o].fill([&](const auto &x, const auto &y) {
+                return game.screen[y][x] ? 1.0f : 0.0f;
+            });
+            */
+        }
+};
+
+auto model_cost(Model &model, const size_t& steps) -> size_t {
     auto game = PongGame();
 
-    auto i = 0;
     auto score = 0;
 
     while (!game.is_game_over()) {
         game.simulate_frame();
 
-        auto o = i % 2;
-        auto n = (i + 1) % 2;
-
-        auto &old_state = model.states[o].fill([&](const auto &x, const auto &y) {
+        model.get_old_state().fill([&](const auto &x, const auto &y) {
             return game.screen[y][x] ? 1.0f : 0.0f;
         });
 
-        auto &new_state = model.states[n];
-        auto &weights = model.weights;
-
         auto offset = rand_int(-3, 3);
-        for (std::int32_t t = 0; t < (24 + offset); ++t) {
-            o = i % 2;
-            n = (i + 1) % 2;
+        for (std::int32_t t = 0; t < (steps + offset); ++t)
+            model.simulate_step();
 
-            old_state = model.states[o];
-            new_state = model.states[n];
-
-            calculate_state(new_state, old_state, weights);
-
-            new_state.apply(NormalizeValue());
-            new_state.apply(ReluValue<float>{});
-            ++i;
-        }
-
-        if (new_state(16, 8) < 0.5f) game.paddle_left();
-        if (new_state(16, 8) > 0.5f) game.paddle_right();
+        if (model.get_new_state()(16, 8) < 0.5f) game.paddle_left();
+        if (model.get_new_state()(16, 8) > 0.5f) game.paddle_right();
 
         ++score;
 
@@ -106,50 +107,31 @@ auto model_cost(Model &model) -> size_t {
     return score;
 }
 
-auto model_demonstrate(Model& model) -> void {
+auto model_demonstrate(Model& model, const size_t& steps) -> void {
     model.fill_states(0.0f);
 
     auto game = PongGame();
 
-    std::int32_t i = 0;
     std::int32_t score = 0;
 
     while (!game.is_game_over()) {
         game.simulate_frame();
 
-        auto o = i % 2;
-        auto n = (i + 1) % 2;
-
-        auto &old_state = model.states[o].fill([&](const auto &x, const auto &y) {
+        model.get_old_state().fill([&](const auto &x, const auto &y) {
             return game.screen[y][x] ? 1.0f : 0.0f;
         });
 
-        auto &new_state = model.states[n];
-        auto &weights = model.weights;
-
         auto offset = rand_int(-3, 3);
-        for (std::int32_t t = 0; t < (24 + offset); ++t) {
-            o = i % 2;
-            n = (i + 1) % 2;
+        for (std::int32_t t = 0; t < (steps + offset); ++t)
+            model.simulate_step();
 
-            old_state = model.states[o];
-            new_state = model.states[n];
-
-            calculate_state(new_state, old_state, weights);
-
-            new_state.apply(NormalizeValue());
-            new_state.apply(ReluValue<float>{});
-
-            ++i;
-        }
+        if (model.get_new_state()(16, 8) < 0.5f) game.paddle_left();
+        if (model.get_new_state()(16, 8) > 0.5f) game.paddle_right();
 
         ++score;
 
-        if (new_state(16, 8) < 0.5f) game.paddle_left();
-        if (new_state(16, 8) > 0.5f) game.paddle_right();
-
         game.display_buffer();
-        export_state_as_image("state.png", new_state);
+        export_state_as_image("state.png", model.get_new_state());
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
@@ -169,7 +151,7 @@ auto model_demonstrate(Model& model) -> void {
     auto best_score = 0;
 
     best.weights.fill([]() {
-        return Kernel3<float>().fill(m964::rand_float(-1.0, 1.0f));
+        return Kernel().fill(m964::rand_float(-1.0, 1.0f));
     });
 
     auto generation = 1;
@@ -191,7 +173,7 @@ auto model_demonstrate(Model& model) -> void {
         }
 
         executor.execute(models.begin(), models.end(), [&](auto &model) {
-            auto score = model_cost(model);
+            auto score = model_cost(model, 24);
 
             best_mutex.lock();
             if (score > best_score) {
@@ -212,7 +194,7 @@ auto model_demonstrate(Model& model) -> void {
     std::cout << "Training is finished !\n";
 
     while(1)
-        model_demonstrate(best);
+        model_demonstrate(best, 24);
 
     return 0;
 }

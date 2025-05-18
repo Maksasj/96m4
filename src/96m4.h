@@ -1,6 +1,6 @@
 #pragma once
 
 #include "layer.h"
-#include "kernel.hpp"
+#include "kernel.h"
 #include "model.h"
-#include "utils.hpp"
+#include "utils.h"
