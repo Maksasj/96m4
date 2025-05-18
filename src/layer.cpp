@@ -1,38 +1,8 @@
 #include "layer.h"
 
 namespace m964 {
-    Layer::Layer(const std::size_t& width, const std::size_t height) : width(width), height(height) {
-        values = new float[width * height];
-    }
-
-    Layer::Layer(const Layer& other) : width(other.width), height(other.height) {
-        values = new float[width * height];
-        std::copy(other.values, other.values + (width * height), values);
-    }
-
-    Layer& Layer::operator=(const Layer& other) {
-        if (this != &other)
-            std::copy(other.values, other.values + (width * height), values);
-        
-        return *this;
-    }
-
-    Layer::Layer(Layer&& other) noexcept : width(width), height(height), values(other.values) { 
-        other.values = nullptr;
-    }
-
-    Layer& Layer::operator=(Layer&& other) noexcept {
-        if (this != &other) {
-            delete[] values;
-            values = other.values;
-            other.values = nullptr;
-        }
-
-        return *this;
-    }
-
-    Layer::~Layer() {
-        delete [] values;
+    Layer::Layer(const std::size_t& width, const std::size_t& height) : width(width), height(height) {
+        values.resize(width * height);
     }
 
     auto Layer::fill(const float& value) -> Layer& {

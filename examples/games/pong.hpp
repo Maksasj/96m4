@@ -48,8 +48,8 @@ class PongGame {
 
     public:
         auto paddle_prediction() const -> float {
-            // const auto paddle = (paddle_x + PADDLE_WIDTH/2);
-            const auto paddle = paddle_x;
+            const auto paddle = paddle_x + PADDLE_WIDTH*0.5;
+            // const auto paddle = paddle_x;
 
             if (ball_x > paddle)
                 return 1.0f;

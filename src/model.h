@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include <vector>
+#include <iostream>
 
 #include "layer.h"
 #include "kernel_layer.h"
@@ -12,7 +14,7 @@ namespace m964 {
             std::size_t width;
             std::size_t height;
 
-            Layer states[2];
+            std::vector<Layer> states;
             KernelLayer weights;
 
             std::size_t old_state;

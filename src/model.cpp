@@ -6,16 +6,21 @@ namespace m964 {
         const std::size_t& height
     ) : width(width),
         height(height),
-        states{ Layer(width, height), Layer(width, height) },
         weights(width, height)
     {
+
+        states.emplace_back(width, height);
+        states.emplace_back(width, height);
+
         reset_states();
+
     }
 
     auto Model::reset_states() -> void {
-        fill_states(0.0f);
         old_state = 0;
         new_state = 1;
+
+        fill_states(0.0f);
     }
 
     auto Model::fill_states(const float& value) ->void {

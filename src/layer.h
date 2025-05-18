@@ -10,16 +10,10 @@ namespace m964 {
             std::size_t width; 
             std::size_t height;
 
-            float* values;
-        
-        public:
-            explicit Layer(const std::size_t& width, const std::size_t height);
-            ~Layer();
+            std::vector<float> values;
 
-            Layer(const Layer& other);
-            Layer& operator=(const Layer& other);
-            Layer(Layer&& other) noexcept;
-            Layer& operator=(Layer&& other) noexcept;
+        public:
+            Layer(const std::size_t& width, const std::size_t& height);
 
             auto fill(const float& value) -> Layer&;
             auto fill(const std::function<float()>& lambda) -> Layer&;
