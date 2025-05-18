@@ -21,6 +21,7 @@ namespace m964 {
         public:
             Model(const std::size_t& width, const std::size_t& height);
 
+            auto reset_states() -> void;
             auto fill_states(const float& value) -> void;
             auto simulate_step() -> void;
 

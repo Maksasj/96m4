@@ -56,6 +56,14 @@ class PongGame {
             paddle_x = std::max(0, std::min(paddle_x, SCREEN_WIDTH - PADDLE_WIDTH));
         }
 
+        auto get_paddle_position() -> std::pair<int, int> {
+            return std::make_pair(paddle_x, paddle_y);
+        }
+
+        auto get_ball_position() -> std::pair<int, int> {
+            return std::make_pair(ball_x, ball_y);
+        }
+
         PongGame() {
             SCREEN_WIDTH = 32;
             SCREEN_HEIGHT = 16;

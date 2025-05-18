@@ -9,6 +9,11 @@ namespace m964 {
         states{ Layer(width, height), Layer(width, height) },
         weights(width, height)
     {
+        reset_states();
+    }
+
+    auto Model::reset_states() -> void {
+        fill_states(0.0f);
         old_state = 0;
         new_state = 1;
     }
@@ -42,19 +47,122 @@ namespace m964 {
         const auto width = new_state.get_width();
         const auto height = new_state.get_height();
 
-        for(size_t x = 1; x < width - 1; ++x) {
-            for(size_t y = 1; y < height - 1; ++y) {
-                auto value = state(x, y) * weights(x, y)(1, 1);
-                value += state(x, y + 1) * weights(x, y + 1)(1, 2);
-                value += state(x, y - 1) * weights(x, y - 1)(1, 0);
-                value += state(x + 1, y) * weights(x + 1, y )(2, 1);
-                value += state(x - 1, y) * weights(x - 1, y )(0, 1);
+        const auto width_m = width - 1;
+        const auto height_m = height - 1;
 
-                value += state(x + 1, y + 1) * weights(x + 1, y + 1)(2, 2);
-                value += state(x - 1, y - 1) * weights(x - 1, y - 1)(0, 0);
+        { // top left
+            const auto& kernel = weights(0, 0);
 
-                value += state(x + 1, y - 1) * weights(x + 1, y - 1)(2, 0);
-                value += state(x - 1, y + 1) * weights(x - 1, y + 1)(0, 2);
+            auto value = state(0, 0) * kernel(1, 1);
+            value += state(0, 0 + 1) * kernel(1, 2);
+            value += state(0 + 1, 0) * kernel(2, 1);
+            value += state(0 + 1, 0 + 1) * kernel(2, 2);
+            new_state(0, 0) = value;
+        }
+
+        { // top right
+            const auto& kernel = weights(width_m, 0);
+
+            auto value = state(width_m, 0) * kernel(1, 1);
+            value += state(width_m, 0 + 1) * kernel(1, 2);
+            value += state(width_m - 1, 0) * kernel(0, 1);
+            value += state(width_m - 1, 0 + 1) * kernel(0, 2);
+
+            new_state(width_m, 0) = value;
+        }
+
+        { // bottom left
+            const auto& kernel = weights(0, height_m);
+
+            auto value = state(0, height_m) * kernel(1, 1);
+            value += state(0, height_m - 1) * kernel(1, 0);
+            value += state(0 + 1, height_m) * kernel(2, 1);
+            value += state(0 + 1, height_m - 1) * kernel(2, 0);
+
+            new_state(0, height_m) = value;
+        }
+
+        { // bottom right
+            const auto& kernel = weights(width_m, height_m);
+
+            auto value = state(width_m, height_m) * kernel(1, 1);
+            value += state(width_m, height_m - 1) * kernel(1, 0);
+            value += state(width_m - 1, height_m) * kernel(0, 1);
+            value += state(width_m - 1, height_m - 1) * kernel(0, 0);
+
+            new_state(width_m, height_m) = value;
+        }
+
+        for(int x = 1; x < width_m; ++x) {
+            {
+                const auto& kernel = weights(x, 0);
+
+                auto value = state(x, 0) * kernel(1, 1);
+                value += state(x, 0 + 1) * kernel(1, 2);
+                value += state(x + 1, 0) * kernel(2, 1);
+                value += state(x - 1, 0) * kernel(0, 1);
+                value += state(x + 1, 0 + 1) * kernel(2, 2);
+                value += state(x - 1, 0 + 1) * kernel(0, 2);
+
+                new_state(x, 0) = value;
+            }
+
+            {
+                const auto& kernel = weights(x, height_m);
+
+                auto value = state(x, height_m) * kernel(1, 1);
+                value += state(x, height_m - 1) * kernel(1, 0);
+                value += state(x + 1, height_m) * kernel(2, 1);
+                value += state(x - 1, height_m) * kernel(0, 1);
+                value += state(x - 1, height_m - 1) * kernel(0, 0);
+                value += state(x + 1, height_m - 1) * kernel(2, 0);
+
+                new_state(x, 0) = value;
+            }
+        }
+
+        for(int y = 1; y < height_m; ++y) {
+            {
+                const auto& kernel = weights(0, y);
+
+                auto value = state(0, y) * kernel(1, 1);
+                value += state(0, y + 1) * kernel(1, 2);
+                value += state(0, y - 1) * kernel(1, 0);
+                value += state(0 + 1, y) * kernel(2, 1);
+                value += state(0 + 1, y + 1) * kernel(2, 2);
+                value += state(0 + 1, y - 1) * kernel(2, 0);
+
+                new_state(0, y) = value;
+            }
+            {
+                const auto& kernel = weights(width_m, y);
+
+                auto value = state(width_m, y) * kernel(1, 1);
+                value += state(width_m, y + 1) * kernel(1, 2);
+                value += state(width_m, y - 1) * kernel(1, 0);
+                value += state(width_m + 1, y) * kernel(2, 1);
+                value += state(width_m + 1, y + 1) * kernel(2, 2);
+                value += state(width_m + 1, y - 1) * kernel(2, 0);
+
+                new_state(width_m, y) = value;
+            }
+        }
+
+        for(size_t x = 1; x < width_m; ++x) {
+            for(size_t y = 1; y < height_m; ++y) {
+                const auto& kernel = weights(x, y);
+
+                auto value = state(x, y) * kernel(1, 1);
+                value += state(x, y + 1) * kernel(1, 2);
+                value += state(x, y - 1) * kernel(1, 0);
+                value += state(x + 1, y) * kernel(2, 1);
+                value += state(x - 1, y) * kernel(0, 1);
+
+                value += state(x + 1, y + 1) * kernel(2, 2);
+                value += state(x - 1, y - 1) * kernel(0, 0);
+
+                value += state(x + 1, y - 1) * kernel(2, 0);
+                value += state(x - 1, y + 1) * kernel(0, 2);
 
                 new_state(x, y) = value;
             }

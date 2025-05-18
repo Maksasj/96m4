@@ -46,7 +46,7 @@ namespace m964 {
 
     auto KernelOffset::operator()(Kernel& value) const -> void {
         for(auto& j : value.values)
-            j += m964::rand_float(min,max);
+            j += rand_float(min,max);
     }
 }
 

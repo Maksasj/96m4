@@ -67,16 +67,16 @@ auto model_cost(Model &model, const size_t& steps) -> size_t {
     while (!game.is_game_over()) {
         game.simulate_frame();
 
-        model.get_old_state().fill([&](const auto &x, const auto &y) {
-            return game.screen[y][x] ? 1.0f : 0.0f;
-        });
+        model.get_old_state()(0, 1) = static_cast<float>(game.get_ball_position().first) / 32.0f;
+        model.get_old_state()(1, 1) = static_cast<float>(game.get_ball_position().second) / 16.0f;
+        model.get_old_state()(2, 1) = static_cast<float>(game.get_paddle_position().first) / 32.0f;
 
-        auto offset = rand_int(-3, 3);
+        auto offset = rand_int(-1, 1);
         for (std::int32_t t = 0; t < (steps + offset); ++t)
             model.simulate_step();
 
-        if (model.get_new_state()(16, 8) < 0.5f) game.paddle_left();
-        if (model.get_new_state()(16, 8) > 0.5f) game.paddle_right();
+        if (model.get_new_state()(1, 0) < 0.5f) game.paddle_left();
+        if (model.get_new_state()(1, 0) > 0.5f) game.paddle_right();
 
         ++score;
 
@@ -94,16 +94,16 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
     while (!game.is_game_over()) {
         game.simulate_frame();
 
-        model.get_old_state().fill([&](const auto &x, const auto &y) {
-            return game.screen[y][x] ? 1.0f : 0.0f;
-        });
+        model.get_old_state()(0, 1) = static_cast<float>(game.get_ball_position().first) / 32.0f;
+        model.get_old_state()(1, 1) = static_cast<float>(game.get_ball_position().second) / 16.0f;
+        model.get_old_state()(2, 1) = static_cast<float>(game.get_paddle_position().first) / 32.0f;
 
-        auto offset = rand_int(-3, 3);
+        auto offset = rand_int(-1, 1);
         for (std::int32_t t = 0; t < (steps + offset); ++t)
             model.simulate_step();
 
-        if (model.get_new_state()(16, 8) < 0.5f) game.paddle_left();
-        if (model.get_new_state()(16, 8) > 0.5f) game.paddle_right();
+        if (model.get_new_state()(1, 0) < 0.5f) game.paddle_left();
+        if (model.get_new_state()(1, 0) > 0.5f) game.paddle_right();
 
         ++score;
 
@@ -124,8 +124,8 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
         arguments.insert(argv[i]);
 
     auto best_mutex = std::mutex {};
-    auto best = Model(32u, 16u);
-    auto best_score = model_cost(best, 24);
+    auto best = Model(3, 3);
+    auto best_score = model_cost(best, 5);
 
     best.weights.fill([]() {
         return Kernel().fill(m964::rand_float(-1.0, 1.0f));
@@ -138,9 +138,9 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
         best.reset_states();
 
         auto models = std::vector<Model>{};
-        models.reserve(100);
+        models.reserve(1000);
 
-        for (auto i = 0; i < 100; ++i) {
+        for (auto i = 0; i < 1000; ++i) {
             auto model = best;
 
             model.weights.apply(KernelOffset {
@@ -150,7 +150,7 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
         }
 
         executor.execute(models.begin(), models.end(), [&](auto &model) {
-            auto score = model_cost(model, 24);
+            auto score = model_cost(model, 5);
 
             best_mutex.lock();
             if (score > best_score) {
@@ -162,7 +162,7 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
         });
 
         ++epoch;
-        std::cout << "Epoch " << epoch << " (" <<  epoch * 100 << ") with generation " << generation << " with best score " << best_score << "\n";
+        std::cout << "Epoch " << epoch << " (" <<  epoch * 1000 << ") with generation " << generation << " with best score " << best_score << "\n";
 
         if (best_score > 1000)
             break;
@@ -171,7 +171,7 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
     std::cout << "Training is finished !\n";
 
     while(1)
-        model_demonstrate(best, 24);
+        model_demonstrate(best, 5);
 
     return 0;
 }
