@@ -60,23 +60,57 @@ class ParallelExecutor {
         unsigned int num_threads;
 };
 
-auto model_cost(Model &model, const size_t& steps) -> size_t {
-    auto game = PongGame();
+auto model_test(Model &model, const size_t& steps) -> std::size_t {
+    auto game = new PongGame();
     auto score = 0;
 
-    while (!game.is_game_over()) {
-        game.simulate_frame();
+    while (!game->is_game_over()) {
+        game->simulate_frame();
 
-        model.get_old_state()(0, 1) = static_cast<float>(game.get_ball_position().first) / 32.0f;
-        model.get_old_state()(1, 1) = static_cast<float>(game.get_ball_position().second) / 16.0f;
-        model.get_old_state()(2, 1) = static_cast<float>(game.get_paddle_position().first) / 32.0f;
+        model.reset_states();
+        model.get_old_state()(0, 1) = static_cast<float>(game->get_ball_position().first) / 32.0f;
+        model.get_old_state()(1, 1) = static_cast<float>(game->get_ball_position().second) / 16.0f;
+        model.get_old_state()(2, 1) = static_cast<float>(game->get_paddle_position().first) / 32.0f;
 
-        auto offset = rand_int(-1, 1);
-        for (std::int32_t t = 0; t < (steps + offset); ++t)
+        // const auto offset = rand_int(-1, 1);
+        for (std::int32_t t = 0; t < steps; ++t)
             model.simulate_step();
 
-        if (model.get_new_state()(1, 0) < 0.5f) game.paddle_left();
-        if (model.get_new_state()(1, 0) > 0.5f) game.paddle_right();
+        const auto sample = model.get_new_state()(1, 0);
+
+        if (sample < 0.5f) game->paddle_left();
+        if (sample > 0.5f) game->paddle_right();
+
+        ++score;
+    }
+
+    delete game;
+    return score;
+}
+
+auto model_cost(Model &model, const size_t& steps) -> float {
+    auto game = new PongGame();
+    auto score = 0;
+    auto cost = 0.0f;
+
+    while (!game->is_game_over()) {
+        game->simulate_frame();
+
+        model.reset_states();
+        model.get_old_state()(0, 1) = static_cast<float>(game->get_ball_position().first) / 32.0f;
+        model.get_old_state()(1, 1) = static_cast<float>(game->get_ball_position().second) / 16.0f;
+        model.get_old_state()(2, 1) = static_cast<float>(game->get_paddle_position().first) / 32.0f;
+
+        // const auto offset = rand_int(-1, 1);
+        for (std::int32_t t = 0; t < steps; ++t)
+            model.simulate_step();
+
+        const auto sample = model.get_new_state()(1, 0);
+        const auto expected = game->paddle_prediction();
+        cost += std::fabs(sample - expected);
+
+        if (expected < 0.5f) game->paddle_left();
+        if (expected > 0.5f) game->paddle_right();
 
         ++score;
 
@@ -84,48 +118,49 @@ auto model_cost(Model &model, const size_t& steps) -> size_t {
             break;
     }
 
-    return score;
+    delete game;
+    return cost;
 }
 
 auto model_demonstrate(Model& model, const size_t& steps) -> void {
-    auto game = PongGame();
+    auto game = new PongGame();
     auto score = 0;
 
-    while (!game.is_game_over()) {
-        game.simulate_frame();
+    while (!game->is_game_over()) {
+        game->simulate_frame();
 
-        model.get_old_state()(0, 1) = static_cast<float>(game.get_ball_position().first) / 32.0f;
-        model.get_old_state()(1, 1) = static_cast<float>(game.get_ball_position().second) / 16.0f;
-        model.get_old_state()(2, 1) = static_cast<float>(game.get_paddle_position().first) / 32.0f;
+        model.reset_states();
+        model.get_old_state()(0, 1) = static_cast<float>(game->get_ball_position().first) / 32.0f;
+        model.get_old_state()(1, 1) = static_cast<float>(game->get_ball_position().second) / 16.0f;
+        model.get_old_state()(2, 1) = static_cast<float>(game->get_paddle_position().first) / 32.0f;
 
-        auto offset = rand_int(-1, 1);
-        for (std::int32_t t = 0; t < (steps + offset); ++t)
+        // const auto offset = rand_int(-1, 1);
+        for (std::int32_t t = 0; t < steps; ++t)
             model.simulate_step();
 
-        if (model.get_new_state()(1, 0) < 0.5f) game.paddle_left();
-        if (model.get_new_state()(1, 0) > 0.5f) game.paddle_right();
+        const auto sample = model.get_new_state()(1, 0);
+        if (sample < 0.5f) game->paddle_left();
+        if (sample > 0.5f) game->paddle_right();
 
         ++score;
 
-        game.display_buffer();
+        game->display_buffer();
         export_state_as_image("state.png", model.get_new_state());
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
+    delete game;
+
     std::cout << score << std::endl;
 }
 
-[[noreturn]] auto main(const int argc, char* argv[]) -> std::int32_t {
+auto main() -> std::int32_t {
     auto arguments = std::unordered_set<std::string> {};
 
-    auto executor = ParallelExecutor();
-
-    for (int i = 1; i < argc; ++i)
-        arguments.insert(argv[i]);
-
     auto best_mutex = std::mutex {};
-    auto best = Model(3, 3);
-    auto best_score = model_cost(best, 5);
+    auto best = Model(3, 2);
+    auto found_best = false;
+    auto best_cost = model_cost(best, 5);
 
     best.weights.fill([]() {
         return Kernel().fill(m964::rand_float(-1.0, 1.0f));
@@ -135,8 +170,6 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
     auto epoch = 0;
 
     while (true) {
-        best.reset_states();
-
         auto models = std::vector<Model>{};
         models.reserve(1000);
 
@@ -144,27 +177,34 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
             auto model = best;
 
             model.weights.apply(KernelOffset {
-                -1.0f / static_cast<float>(generation), 1.0f / static_cast<float>(generation)
+                -1.0f * (1.0f / static_cast<float>(generation)), 1.0f * (1.0f / static_cast<float>(generation))
             });
+
             models.push_back(model);
         }
 
+        auto executor = ParallelExecutor();
         executor.execute(models.begin(), models.end(), [&](auto &model) {
-            auto score = model_cost(model, 5);
+            auto cost = model_cost(model, 5);
 
             best_mutex.lock();
-            if (score > best_score) {
-                best_score = score;
+            if (cost < best_cost) {
+                best_cost = cost;
                 best = model;
-                ++generation;
+                found_best = true;
             }
             best_mutex.unlock();
         });
 
-        ++epoch;
-        std::cout << "Epoch " << epoch << " (" <<  epoch * 1000 << ") with generation " << generation << " with best score " << best_score << "\n";
+        if (found_best) {
+            ++generation;
+            found_best = false;
+        }
 
-        if (best_score > 1000)
+        ++epoch;
+        std::cout << "Epoch " << epoch << " (" <<  epoch * 1000 << ") with generation " << generation << " with best cost " << best_cost <<  "\n";
+
+        if (best_cost < 100.0f)
             break;
     }
 

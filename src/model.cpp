@@ -148,8 +148,8 @@ namespace m964 {
             }
         }
 
-        for(size_t x = 1; x < width_m; ++x) {
-            for(size_t y = 1; y < height_m; ++y) {
+        for(int x = 1; x < width_m; ++x) {
+            for(int y = 1; y < height_m; ++y) {
                 const auto& kernel = weights(x, y);
 
                 auto value = state(x, y) * kernel(1, 1);

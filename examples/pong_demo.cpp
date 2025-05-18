@@ -67,6 +67,7 @@ auto model_cost(Model &model, const size_t& steps) -> size_t {
     while (!game.is_game_over()) {
         game.simulate_frame();
 
+        model.reset_states();
         model.get_old_state().fill([&](const auto &x, const auto &y) {
             return game.screen[y][x] ? 1.0f : 0.0f;
         });
@@ -94,6 +95,7 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
     while (!game.is_game_over()) {
         game.simulate_frame();
 
+        model.reset_states();
         model.get_old_state().fill([&](const auto &x, const auto &y) {
             return game.screen[y][x] ? 1.0f : 0.0f;
         });
@@ -135,8 +137,6 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
     auto epoch = 0;
 
     while (true) {
-        best.reset_states();
-
         auto models = std::vector<Model>{};
         models.reserve(100);
 

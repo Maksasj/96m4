@@ -3,6 +3,14 @@
 class PongGame {
     public:
         std::int32_t screen[16][32];
+    std::int32_t paddle_x;
+    std::int32_t paddle_y;
+
+    std::int32_t BALL_SIZE;
+    std::int32_t ball_x;
+    std::int32_t ball_y;
+    std::int32_t ball_vx;
+    std::int32_t ball_vy;
 
     private:
         std::int32_t SCREEN_WIDTH;
@@ -10,14 +18,7 @@ class PongGame {
         
         std::int32_t PADDLE_WIDTH;
         std::int32_t PADDLE_HEIGHT;
-        std::int32_t paddle_x;
-        std::int32_t paddle_y;
-        
-        std::int32_t BALL_SIZE;
-        std::int32_t ball_x;
-        std::int32_t ball_y;
-        std::int32_t ball_vx;
-        std::int32_t ball_vy;
+
 
     private:
         void render_square(std::int32_t x, std::int32_t y, std::int32_t size, std::int32_t color) {
@@ -44,15 +45,28 @@ class PongGame {
                 }
             }
         }
-        
+
     public:
+        auto paddle_prediction() const -> float {
+            // const auto paddle = (paddle_x + PADDLE_WIDTH/2);
+            const auto paddle = paddle_x;
+
+            if (ball_x > paddle)
+                return 1.0f;
+
+            if (ball_x < paddle)
+                return 0.0f;
+
+            return 0.5f;
+        }
+
         void paddle_left() {
-            paddle_x++;
+            paddle_x--;
             paddle_x = std::max(0, std::min(paddle_x, SCREEN_WIDTH - PADDLE_WIDTH));
         }
 
         void paddle_right() {
-            paddle_x--;
+            paddle_x++;
             paddle_x = std::max(0, std::min(paddle_x, SCREEN_WIDTH - PADDLE_WIDTH));
         }
 
