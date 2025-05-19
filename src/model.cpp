@@ -34,8 +34,8 @@ namespace m964 {
 
         calculate_state(n_state, o_state, weights);
 
-        n_state.apply(NormalizeValue());
-        n_state.apply(ReluValue{});
+        // n_state.apply(NormalizeValue());
+        n_state.apply(SigmoidValue{});
 
         std::swap(old_state, new_state);
     }

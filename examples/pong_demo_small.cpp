@@ -33,7 +33,8 @@ auto model_cost(Model &model, const size_t& steps) -> float {
 
         const auto sample = model.get_new_state()(1, 0);
         const auto expected = game.paddle_prediction();
-        cost += std::fabs(expected - sample);
+        const auto diff = expected - sample;
+        cost += diff * diff;
 
         if (expected < 0.5f) game.paddle_left();
         if (expected > 0.5f) game.paddle_right();
@@ -44,7 +45,7 @@ auto model_cost(Model &model, const size_t& steps) -> float {
             break;
     }
 
-    return cost;
+    return cost / static_cast<float>(steps);
 }
 
 auto model_demonstrate(Model& model, const size_t& steps) -> void {
@@ -83,11 +84,12 @@ auto main() -> std::int32_t {
     auto best_mutex = std::mutex {};
     auto best = Model(3, 2);
     auto found_best = false;
-    auto best_cost = model_cost(best, steps);
 
     best.weights.fill([]() {
         return Kernel().fill(rand_float(-1.0, 1.0f));
     });
+
+    auto best_cost = model_cost(best, steps);
 
     auto generation = 1;
     auto epoch = 0;
@@ -129,7 +131,7 @@ auto main() -> std::int32_t {
         ++epoch;
         std::cout << "Epoch " << epoch << " (" <<  epoch * 1000 << ") with generation " << generation << " with best cost " << best_cost <<  "\n";
 
-        if (best_cost < 5)
+        if (best_cost < 25.0f)
             break;
     }
 

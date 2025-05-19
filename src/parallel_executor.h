@@ -8,6 +8,16 @@
 #include <mutex>
 #include <thread>
 
+class LinearExecutor {
+    public:
+        template<typename RandomAccessIterator, typename Func>
+        void execute(RandomAccessIterator first, RandomAccessIterator last, Func func) const {
+            for (auto it = first; it != last; ++it) {
+                func(*it);
+            }
+        }
+};
+
 class ParallelExecutor {
     public:
         explicit ParallelExecutor(const std::size_t num_threads = std::thread::hardware_concurrency()) : num_threads(num_threads > 0 ? num_threads : 1) {
