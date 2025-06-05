@@ -5,3 +5,4 @@
 #include "model.h"
 #include "utils.h"
 #include "parallel_executor.h"
+#include "training.h"

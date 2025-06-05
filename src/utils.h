@@ -45,9 +45,6 @@ namespace m964 {
     };
 
     struct ReluValue {
-        const float min;
-        const float max;
-
         auto operator()(float& value) const -> void;
     };
 

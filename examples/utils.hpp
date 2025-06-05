@@ -4,6 +4,7 @@
 
 #include "96m4.h"
 #include "stb_image_write.h"
+#include "stb_image.h"
 
 float hue_to_rgb(float v1, float v2, float vH) {
 	if (vH < 0)
@@ -101,4 +102,48 @@ auto export_state_as_image(const std::string& file_name, const m964::KernelLayer
     }
 
     stbi_write_jpg(file_name.c_str(), width, height, 4, buffer.data(), width * sizeof(std::int32_t));
+}
+
+struct LoadedImage {
+	std::vector<std::vector<float>> data;
+	int width = 0;
+	int height = 0;
+
+	[[nodiscard]] bool isValid() const {
+		return width > 0 && height > 0 && !data.empty() && data.size() == width && (!data.empty() && data[0].size() == height);
+	}
+};
+
+auto load_image(const std::string& filename) -> LoadedImage {
+	int w, h, channels_in_file;
+	unsigned char* stbi_pixel_data = stbi_load(filename.c_str(), &w, &h, &channels_in_file, STBI_rgb_alpha);
+
+	if (!stbi_pixel_data) {
+		std::cerr << "ERROR: Could not load image " << filename << " - " << stbi_failure_reason() << std::endl;
+		return {{}, 0, 0}; // Return an invalid object
+	}
+
+	std::cout << "Loaded image " << filename << ": " << w << "x" << h << ", channels in file: " << channels_in_file << std::endl;
+
+	std::vector<std::vector<float>> image_matrix(w, std::vector<float>(h));
+
+	for (int i = 0; i < w; ++i) { // Iterating by column (x-coordinate)
+		for (int j = 0; j < h; ++j) { // Iterating by row (y-coordinate)
+			unsigned char* p = stbi_pixel_data + (j * w + i) * 4; // 4 components (RGBA)
+			unsigned char r = p[0];
+			unsigned char g = p[1];
+			unsigned char b = p[2];
+			// unsigned char a = p[3]; // Alpha, if you need it
+
+			// Convert to grayscale using luminance formula.
+			// If your NCA model is designed to output multiple channels (e.g., RGB),
+			// you should store these channels separately and adjust the loss function accordingly.
+			// For this example, we assume the NCA aims to reproduce a single grayscale channel.
+			float grayscale_value = (0.299f * r + 0.587f * g + 0.114f * b) / 255.0f;
+			image_matrix[i][j] = 1.0f - grayscale_value;
+		}
+	}
+
+	stbi_image_free(stbi_pixel_data);
+	return {image_matrix, w, h};
 }
