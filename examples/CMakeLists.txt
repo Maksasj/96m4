@@ -28,3 +28,9 @@ add_executable(image_demo_small image_demo_small.cpp)
 target_link_libraries(image_demo_small stb_image)
 target_link_libraries(image_demo_small stb_image_write)
 target_link_libraries(image_demo_small 96m4)
+
+
+add_executable(math_demo math_demo.cpp)
+target_link_libraries(math_demo stb_image)
+target_link_libraries(math_demo stb_image_write)
+target_link_libraries(math_demo 96m4)

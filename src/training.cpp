@@ -109,7 +109,6 @@ namespace m964 {
             found_new_best_this_epoch = false;
             ParallelExecutor executor; // Assuming this is your parallel execution utility
 
-
             executor.execute(current_population.begin(), current_population.end(), [&](Model &candidate_model) {
                 float candidate_cost = model_cost_callback(candidate_model);
 

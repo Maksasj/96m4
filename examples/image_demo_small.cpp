@@ -47,7 +47,7 @@ auto main() -> std::int32_t {
         auto parameters = GeneticAlgorithmTrainingParameters {
             .model_width = 4,
             .model_height = 4,
-            .n_evolution_steps = 25,
+            .n_evolution_steps = 16,
             .population_size = 100,
             .initial_mutation_strength = 0.1f,
             .target_cost_threshold = 0.5f,
