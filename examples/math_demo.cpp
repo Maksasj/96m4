@@ -43,7 +43,7 @@ auto model_demonstrate(float x_start, float x_end, float step, int n_evolution_s
     std::cout << " ] \n";
 }
 
-auto main() -> std::int32_t {
+auto sample(float x_start, float x_end, float step, const std::function<float(float)>& studied_function) -> void {
     try {
         auto parameters = GeneticAlgorithmTrainingParameters {
             .model_width = 4,
@@ -51,17 +51,9 @@ auto main() -> std::int32_t {
             .n_evolution_steps = 16,
             .population_size = 100,
             .initial_mutation_strength = 0.1f,
-            .target_cost_threshold = 0.7f,
+            .target_cost_threshold = 1.6f,
             .max_epochs = 100000,
             .print_interval_epochs = 20
-        };
-
-        auto x_start = -5.0f;
-        auto x_end = 5.0f;
-        auto step = 0.1f;
-
-        auto studied_function = [](const float& x) {
-            return std::sin(x) + 1;
         };
 
         auto model_cost_function = [&](Model &model) {
@@ -92,8 +84,42 @@ auto main() -> std::int32_t {
     } catch (const std::exception &e) {
         std::cout << e.what() << std::endl;
     }
+}
 
-    std::cout << "\nProgram finished." << std::endl;
+auto main() -> std::int32_t {
+    /*
+    auto studied_function = [](const float& x) {
+        return 0.5 * std::sin(x) + 0.5;
+    };
+    */
+
+    auto studied_function = [](const float& x) {
+        return 2*x*x + x + 0.25;
+    };
+
+    /*
+    auto studied_function = [](const float& x) {
+        return 0.3* log(x);
+    };
+    */
+
+    /*
+    auto x_start = -3.1415;
+    auto x_end = 3.1415;
+    auto step = 0.1f;
+    */
+
+    auto x_start = -0.8;
+    auto x_end = 0.3;
+    auto step = 0.025f;
+
+    /*
+    auto x_start = 1.1;
+    auto x_end = 6;
+    auto step = 0.1f;
+    */
+
+    sample(x_start, x_end, step, studied_function);
 
     return 0;
 }
