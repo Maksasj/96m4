@@ -1,11 +1,9 @@
-#include <iostream>
 
+#include <iostream>
+#include <thread>
 #include <chrono>
-#include <algorithm>
 #include <string>
-#include <random>
 #include <execution>
-#include <mutex>
 
 #include "96m4.h"
 #include "utils.hpp"
@@ -13,40 +11,6 @@
 #include "games/pong.hpp"
 
 using namespace m964;
-
-auto model_cost(Model &model, const size_t& steps) -> float {
-    auto game = PongGame();
-    auto score = 0;
-    auto cost = 0.0f;
-
-    while (!game.is_game_over()) {
-        game.simulate_frame();
-
-        model.reset_states();
-        model.get_old_state()(0, 1) = static_cast<float>(game.get_ball_position().first) / 32.0f;
-        model.get_old_state()(1, 1) = static_cast<float>(game.get_ball_position().second) / 16.0f;
-        model.get_old_state()(2, 1) = static_cast<float>(game.get_paddle_position().first) / 32.0f;
-
-        const auto offset = rand_int(-1, 1);
-        for (std::int32_t t = 0; t < (steps + offset); ++t)
-            model.simulate_step();
-
-        const auto sample = model.get_new_state()(1, 0);
-        const auto expected = game.paddle_prediction();
-        const auto diff = expected - sample;
-        cost += diff * diff;
-
-        if (expected < 0.5f) game.paddle_left();
-        if (expected > 0.5f) game.paddle_right();
-
-        ++score;
-
-        if (score > 1000)
-            break;
-    }
-
-    return cost / static_cast<float>(steps);
-}
 
 auto model_demonstrate(Model& model, const size_t& steps) -> void {
     auto game = PongGame();
@@ -62,7 +26,7 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
 
         const auto offset = rand_int(-1, 1);
         for (std::int32_t t = 0; t < (steps + offset); ++t)
-            model.simulate_step();
+            model.simulate_step_with_biases();
 
         const auto sample = model.get_new_state()(1, 0);
         if (sample < 0.5f) game.paddle_left();
@@ -78,67 +42,63 @@ auto model_demonstrate(Model& model, const size_t& steps) -> void {
     std::cout << score << std::endl;
 }
 
-auto main() -> std::int32_t {
-    auto steps = 5;
+[[noreturn]] auto main() -> std::int32_t {
+    try {
+        auto parameters = GeneticAlgorithmTrainingParameters {
+            .model_width = 3,
+            .model_height = 2,
+            .n_evolution_steps = 24,
+            .population_size = 10,
+            .initial_mutation_strength = 1.0f,
+            .target_cost_threshold = 5.0f,
+            .max_epochs = 100000,
+            .print_interval_epochs = 20
+        };
 
-    auto best_mutex = std::mutex {};
-    auto best = Model(3, 2);
-    auto found_best = false;
+        auto model_cost_function = [&](Model &model) {
+            auto game = PongGame();
+            auto score = 0;
+            auto cost = 0.0f;
 
-    best.weights.fill([]() {
-        return Kernel().fill(rand_float(-1.0, 1.0f));
-    });
+            while (!game.is_game_over()) {
+                game.simulate_frame();
 
-    auto best_cost = model_cost(best, steps);
+                model.reset_states();
+                model.get_old_state()(0, 1) = static_cast<float>(game.get_ball_position().first) / 32.0f;
+                model.get_old_state()(1, 1) = static_cast<float>(game.get_ball_position().second) / 16.0f;
+                model.get_old_state()(2, 1) = static_cast<float>(game.get_paddle_position().first) / 32.0f;
 
-    auto generation = 1;
-    auto epoch = 0;
+                const auto offset = rand_int(-1, 1);
+                for (std::int32_t t = 0; t < (parameters.n_evolution_steps + offset); ++t)
+                    model.simulate_step_with_biases();
 
-    while (true) {
-        const auto mutation_rate = 1.0f / static_cast<float>(generation);
+                const auto sample = model.get_new_state()(1, 0);
+                const auto expected = game.paddle_prediction();
+                const auto diff = expected - sample;
+                cost += diff * diff;
 
-        auto models = std::vector<Model>{};
-        models.reserve(1000);
+                if (expected < 0.5f) game.paddle_left();
+                if (expected > 0.5f) game.paddle_right();
 
-        for (auto i = 0; i < 1000; ++i) {
-            auto model = best;
+                ++score;
 
-            model.weights.apply(KernelOffset {
-                -1.0f * mutation_rate, 1.0f * mutation_rate
-            });
-
-            models.push_back(model);
-        }
-
-        auto executor = ParallelExecutor();
-        executor.execute(models.begin(), models.end(), [&](auto &model) {
-            auto cost = model_cost(model, steps);
-
-            best_mutex.lock();
-            if (cost < best_cost) {
-                best_cost = cost;
-                best = model;
-                found_best = true;
+                if (score > 1000)
+                    break;
             }
-            best_mutex.unlock();
-        });
 
-        if (found_best) {
-            ++generation;
-            found_best = false;
-        }
+            return cost / static_cast<float>(parameters.n_evolution_steps);
+        };
 
-        ++epoch;
-        std::cout << "Epoch " << epoch << " (" <<  epoch * 1000 << ") with generation " << generation << " with best cost " << best_cost <<  "\n";
+        auto best_model = genetic_algorithm_training_hyper(model_cost_function, parameters);
 
-        if (best_cost < 25.0f)
-            break;
+        while (1)
+            model_demonstrate(best_model, parameters.n_evolution_steps);
+    } catch (const std::exception &e) {
+        std::cout << e.what() << std::endl;
     }
 
-    std::cout << "Training is finished !\n";
-
-    while(true)
-        model_demonstrate(best, steps);
+    std::cout << "\nProgram finished." << std::endl;
 
     return 0;
 }
+

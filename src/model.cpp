@@ -67,7 +67,7 @@ namespace m964 {
 
         // n_state.apply(NormalizeValue());
         // n_state.apply(SigmoidValue{});
-        // n_state.apply(ReluValue());
+        n_state.apply(ReluValue());
 
         std::swap(old_state, new_state);
     }
@@ -86,7 +86,7 @@ namespace m964 {
 
         // n_state.apply(NormalizeValue());
         // n_state.apply(SigmoidValue{});
-        // n_state.apply(ReluValue());
+        n_state.apply(ReluValue());
 
         std::swap(old_state, new_state);
     }
